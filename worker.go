@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"log"
+	"time"
 
 	"github.com/streadway/amqp"
 )
@@ -22,12 +24,12 @@ func main() {
 	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
-		"hello",	// name
-		false,		// durable
-		false,		// declare when unused
-		false, 		// exclusive
-		false, 		// no-wait
-		nil,		// arguments
+		"task_queue",	// name
+		true,			// durable
+		false,			// declare when unused
+		false, 			// exclusive
+		false, 			// no-wait
+		nil,			// arguments
 	)
 	failOnError(err, "Failed to declare a queue")
 
@@ -35,7 +37,7 @@ func main() {
 	msgs, err := ch.Consume(
 		q.Name,		// queue
 		"", 		// consumer
-		true,		// auto-ack
+		false,		// auto-ack
 		false,		// exclusive
 		false,		// no-local
 		false, 		// no-wait
@@ -48,6 +50,11 @@ func main() {
 	go func() {
 		for d := range msgs {
 			log.Printf("Received a message: %s", d.Body)
+			dotCount := bytes.Count(d.Body, []byte("."))
+			t := time.Duration(dotCount)
+			time.Sleep(t * time.Second)
+			log.Printf("Done")
+			d.Ack(false)
 		}
 
 	} ()
